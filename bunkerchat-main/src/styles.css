@@ -1,0 +1,135 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * BUNKER CHAT — Sistema de Design
+ * Tema militar/bunker: roxo escuro fortificado, dourado tático, pergaminho envelhecido.
+ */
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-ring-offset-background: var(--background);
+  --color-gold: var(--gold);
+  --color-gold-foreground: var(--gold-foreground);
+  --color-parchment: var(--parchment);
+  --color-tactical: var(--tactical);
+  --color-bunker: var(--bunker);
+  --color-bunker-deep: var(--bunker-deep);
+
+  --font-display: "Roboto Mono", ui-monospace, monospace;
+  --font-sans: "Inter", system-ui, sans-serif;
+
+  --shadow-bunker: 0 10px 40px -12px oklch(0 0 0 / 0.6);
+  --shadow-gold: 0 0 24px -4px oklch(0.75 0.14 85 / 0.4);
+}
+
+:root {
+  --radius: 0.5rem;
+
+  /* Bunker military palette — dark by default (a fortified bunker) */
+  --bunker: oklch(0.24 0.09 305);           /* #4A1A6B roxo escuro militar */
+  --bunker-deep: oklch(0.16 0.06 305);      /* mais profundo */
+  --parchment: oklch(0.88 0.05 80);         /* #E8D5B7 pergaminho */
+  --gold: oklch(0.75 0.14 85);              /* #C9A84C dourado militar */
+  --gold-foreground: oklch(0.15 0.04 305);
+  --tactical: oklch(0.45 0.02 260);         /* #6B7280 cinza tático */
+
+  --background: oklch(0.16 0.06 305);
+  --foreground: oklch(0.94 0.02 80);
+  --card: oklch(0.22 0.08 305);
+  --card-foreground: oklch(0.94 0.02 80);
+  --popover: oklch(0.20 0.07 305);
+  --popover-foreground: oklch(0.94 0.02 80);
+  --primary: oklch(0.75 0.14 85);
+  --primary-foreground: oklch(0.15 0.04 305);
+  --secondary: oklch(0.30 0.08 305);
+  --secondary-foreground: oklch(0.94 0.02 80);
+  --muted: oklch(0.26 0.06 305);
+  --muted-foreground: oklch(0.72 0.03 80);
+  --accent: oklch(0.75 0.14 85);
+  --accent-foreground: oklch(0.15 0.04 305);
+  --destructive: oklch(0.60 0.22 25);
+  --destructive-foreground: oklch(0.98 0.01 80);
+  --border: oklch(0.32 0.06 305);
+  --input: oklch(0.28 0.06 305);
+  --ring: oklch(0.75 0.14 85);
+}
+
+.light {
+  --background: oklch(0.88 0.05 80);
+  --foreground: oklch(0.18 0.05 305);
+  --card: oklch(0.92 0.03 80);
+  --card-foreground: oklch(0.18 0.05 305);
+  --popover: oklch(0.92 0.03 80);
+  --popover-foreground: oklch(0.18 0.05 305);
+  --primary: oklch(0.24 0.09 305);
+  --primary-foreground: oklch(0.88 0.05 80);
+  --secondary: oklch(0.82 0.04 80);
+  --secondary-foreground: oklch(0.18 0.05 305);
+  --muted: oklch(0.84 0.03 80);
+  --muted-foreground: oklch(0.40 0.04 305);
+  --accent: oklch(0.60 0.14 85);
+  --accent-foreground: oklch(0.15 0.04 305);
+  --border: oklch(0.75 0.05 80);
+  --input: oklch(0.80 0.04 80);
+  --ring: oklch(0.60 0.14 85);
+}
+
+@utility bunker-grid {
+  background-image:
+    linear-gradient(oklch(0.75 0.14 85 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, oklch(0.75 0.14 85 / 0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+@utility bunker-vignette {
+  background:
+    radial-gradient(ellipse at top, oklch(0.30 0.10 305 / 0.6), transparent 60%),
+    radial-gradient(ellipse at bottom, oklch(0.10 0.04 305 / 0.8), transparent 70%);
+}
+
+@utility text-stencil {
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+  }
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    letter-spacing: 0.02em;
+  }
+}
