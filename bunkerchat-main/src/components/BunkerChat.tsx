@@ -1,17 +1,36 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ensureBunkerConversation, signOut } from "@/lib/bunker-auth";
-import { fileToDataUrl, fromStoragePath, resolveImageUrl, toStoragePath } from "@/lib/chat-images";
+import { fromStoragePath } from "@/lib/chat-images";
 import type { Conversation, Message, Profile } from "@/types/bunker";
 import { toast } from "sonner";
-import { Send, Smile, Image as ImageIcon, LogOut, Loader2, Camera, Images, Trash } from "lucide-react";
+import { Send, Smile, LogOut, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { BunkerLogo } from "@/components/BunkerLogo";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-const QUICK_EMOJIS = ["❤️", "😂", "😍", "🥰", "😮", "😢", "👍", "🔥", "🛡️", "✨", "🎉", "😘"];
-const IMAGE_ACCEPT = "image/jpeg,image/png,image/gif,image/webp,image/heic,image/heif";
+const QUICK_EMOJIS = [
+  "❤️", "😂", "😍", "🥰", "😮", "😢", "👍", "🔥", "🛡️", "✨", "🎉", "😘",
+  "😭", "😱", "😎", "🤔", "😌", "🤗", "😏", "🙃", "😊", "😃", "😄", "😁",
+  "🤣", "😆", "😅", "🤗", "😍", "🥰", "😘", "😚", "😗", "😙", "😌", "😍",
+  "🥳", "🤩", "😎", "🤓", "😎", "🤓", "😎", "🤓", "😎", "🤓", "😎", "🤓",
+  "😻", "😸", "😹", "😺", "😻", "😼", "😽", "🙀", "😿", "😾", "🐱", "🐶",
+  "👋", "🤚", "🖐", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🫰", "🤟",
+  "🤘", "🤙", "👈", "👉", "👆", "👇", "☝️", "👍", "👎", "✊", "👊", "🤛",
+  "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🤞", "💅", "👂", "👃", "🧠", "🦷",
+  "🦴", "🦵", "🦶", "🦾", "🦿", "💪", "🦻", "🦶", "🦵", "🦾", "🦿", "💪",
+  "🌟", "⭐", "✨", "💫", "⚡", "🔥", "💥", "💯", "👍", "👏", "🎉", "🎊",
+  "🎈", "🎀", "🎁", "🏆", "🥇", "🥈", "🥉", "🏅", "🎖", "🎗", "🎯", "🎲",
+  "🧩", "🚀", "🛸", "🛰", "🌌", "🌠", "🌃", "🌆", "🌇", "🌉", "🌁", "🌄",
+  "🌅", "🌆", "🌇", "🌉", "🌉", "🌊", "🏔", "⛰", "🌋", "🗻", "🏕", "⛺",
+  "🏠", "🏡", "🏢", "🏣", "🏤", "🏥", "🏦", "🏧", "🏨", "🏩", "🏪", "🏫",
+  "🎪", "🎭", "🎨", "🎬", "🎤", "🎧", "🎼", "🎹", "🎸", "🎺", "🎷", "🥁",
+  "🎲", "🎯", "🎳", "🎮", "🎰", "🧿", "🚗", "🚕", "🚙", "🚌", "🚎", "🏎",
+  "🚓", "🚑", "🚒", "🚐", "🛻", "🚚", "🚛", "🚜", "🏍", "🏎", "🛵", "🦯",
+  "⚽", "🀄", "🎾", "🏀", "🏐", "🏈", "🏉", "🎱", "🎳", "🎯", "🎪", "🎢",
+  "🍕", "🍔", "🍟", "🍗", "🌭", "🍿", "🍱", "🍜", "🍝", "🍛", "🍣", "🍱",
+  "☕", "🍵", "🍶", "🍾", "🍷", "🍸", "🍹", "🍺", "🍻", "🥂", "🥃", "🍻",
+];
 
 function formatDay(iso: string): string {
   const d = new Date(iso);
@@ -43,21 +62,10 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
   const [sending, setSending] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
   const [typingUser, setTypingUser] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [imagePickerOpen, setImagePickerOpen] = useState(false);
-  const [resolvedImages, setResolvedImages] = useState<Record<string, string>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
-  const galleryRef = useRef<HTMLInputElement>(null);
-  const cameraRef = useRef<HTMLInputElement>(null);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const createSignedUrl = useCallback(async (path: string) => {
-    const { data, error } = await supabase.storage
-      .from("chat-uploads")
-      .createSignedUrl(path, 60 * 60 * 24);
-    if (error) return null;
-    return data.signedUrl;
-  }, []);
+
 
   const activeConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === convId) ?? conversations[0] ?? null,
@@ -162,33 +170,7 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
 
 
 
-  useEffect(() => {
-    const pending = messages.filter((m) => m.image_url);
-    if (pending.length === 0) return;
 
-    void (async () => {
-      const updates: Record<string, string> = {};
-      await Promise.all(
-        pending.map(async (m) => {
-          const url = await resolveImageUrl(m.image_url, createSignedUrl);
-          if (url) updates[m.id] = url;
-        }),
-      );
-      if (Object.keys(updates).length > 0) {
-        setResolvedImages((prev) => {
-          const merged = { ...prev };
-          let changed = false;
-          for (const [id, url] of Object.entries(updates)) {
-            if (!merged[id]) {
-              merged[id] = url;
-              changed = true;
-            }
-          }
-          return changed ? merged : prev;
-        });
-      }
-    })();
-  }, [messages, createSignedUrl]);
 
   useEffect(() => {
     if (!convId) return;
@@ -244,18 +226,18 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
     }
   }, []);
 
-  async function handleSend(content?: string, imageUrl?: string) {
-    const body = (content ?? text).trim();
+  async function handleSend() {
+    const body = text.trim();
     if (!convId) return;
-    if (!body && !imageUrl) return;
+    if (!body) return;
     setSending(true);
     try {
       const { error } = await db.from("messages").insert({
         conversation_id: convId,
         user_id: me.id,
         content: body || null,
-        image_url: imageUrl ?? null,
-        type: imageUrl ? "image" : "text",
+        image_url: null,
+        type: "text",
       });
       if (error) throw error;
       setText("");
@@ -267,58 +249,7 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
     }
   }
 
-  async function handleFile(file: File) {
-    if (!convId) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Selecione um arquivo de imagem");
-      return;
-    }
-    setUploading(true);
-    setImagePickerOpen(false);
-    try {
-      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_") || "foto.jpg";
-      const path = `${convId}/${crypto.randomUUID()}-${safeName}`;
-      const up = await supabase.storage.from("chat-uploads").upload(path, file, {
-        cacheControl: "3600",
-        upsert: false,
-        contentType: file.type,
-      });
 
-      if (!up.error) {
-        const signed = await createSignedUrl(path);
-        if (signed) {
-          setResolvedImages((prev) => ({ ...prev, [`pending-${path}`]: signed }));
-        }
-        await handleSend("", toStoragePath(path));
-        toast.success("Imagem enviada");
-        return;
-      }
-
-      const dataUrl = await fileToDataUrl(file);
-      await handleSend("", dataUrl);
-      toast.success("Imagem enviada");
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Falha no upload da imagem");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  function onFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const f = e.target.files?.[0];
-    e.target.value = "";
-    if (f) void handleFile(f);
-  }
-
-  function openGallery() {
-    setImagePickerOpen(false);
-    galleryRef.current?.click();
-  }
-
-  function openCamera() {
-    setImagePickerOpen(false);
-    cameraRef.current?.click();
-  }
 
   async function handleSignOut() {
     await signOut();
@@ -339,14 +270,6 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Falha ao limpar o chat");
     }
-  }
-
-  function getDisplayImageUrl(m: Message): string | null {
-    if (resolvedImages[m.id]) return resolvedImages[m.id];
-    if (m.image_url && (m.image_url.startsWith("data:image/") || !fromStoragePath(m.image_url))) {
-      return m.image_url;
-    }
-    return null;
   }
 
   return (
@@ -408,7 +331,6 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
                   {group.items.map((m) => {
                     const mine = m.user_id === me.id;
                     const author = m.user_id ? profiles[m.user_id]?.username ?? "?" : "?";
-                    const displayUrl = getDisplayImageUrl(m);
                     return (
                       <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                         <div
@@ -420,22 +342,6 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
                         >
                           {!mine && (
                             <div className="text-stencil text-[10px] opacity-80 mb-1">{author}</div>
-                          )}
-                          {m.image_url && (
-                            displayUrl ? (
-                              <a href={displayUrl} target="_blank" rel="noopener noreferrer">
-                                <img
-                                  src={displayUrl}
-                                  alt="Imagem enviada"
-                                  loading="lazy"
-                                  className="mb-1 max-h-72 rounded-md object-cover cursor-pointer"
-                                />
-                              </a>
-                            ) : (
-                              <div className="mb-1 flex h-32 items-center justify-center rounded-md bg-muted/40">
-                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                              </div>
-                            )
                           )}
                           {m.content && (
                             <p className="whitespace-pre-wrap break-words text-sm leading-relaxed">{m.content}</p>
@@ -495,57 +401,6 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
             }}
             className="mx-auto flex max-w-2xl items-end gap-2"
           >
-            <input
-              ref={galleryRef}
-              type="file"
-              accept={IMAGE_ACCEPT}
-              className="sr-only"
-              onChange={onFileSelected}
-            />
-            <input
-              ref={cameraRef}
-              type="file"
-              accept={IMAGE_ACCEPT}
-              capture="environment"
-              className="sr-only"
-              onChange={onFileSelected}
-            />
-
-            <Popover open={imagePickerOpen} onOpenChange={setImagePickerOpen}>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  disabled={uploading}
-                  aria-label="Anexar imagem"
-                  className="shrink-0"
-                >
-                  {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageIcon className="h-4 w-4" />}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent side="top" align="start" className="w-52 p-2">
-                <div className="flex flex-col gap-1">
-                  <button
-                    type="button"
-                    onClick={openGallery}
-                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm hover:bg-gold/15 transition"
-                  >
-                    <Images className="h-4 w-4 text-gold" />
-                    Galeria de fotos
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openCamera}
-                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-sm hover:bg-gold/15 transition"
-                  >
-                    <Camera className="h-4 w-4 text-gold" />
-                    Tirar foto
-                  </button>
-                </div>
-              </PopoverContent>
-            </Popover>
-
             <Button
               type="button"
               variant="ghost"
