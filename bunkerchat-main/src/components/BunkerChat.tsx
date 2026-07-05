@@ -4,7 +4,7 @@ import { ensureBunkerConversation, signOut } from "@/lib/bunker-auth";
 import { fileToDataUrl, fromStoragePath, resolveImageUrl, toStoragePath } from "@/lib/chat-images";
 import type { Conversation, Message, Profile } from "@/types/bunker";
 import { toast } from "sonner";
-import { Send, Smile, Image as ImageIcon, LogOut, Loader2, Camera, Images, Archive, Trash2, Plus } from "lucide-react";
+import { Send, Smile, Image as ImageIcon, LogOut, Loader2, Camera, Images, Trash } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { BunkerLogo } from "@/components/BunkerLogo";
@@ -46,7 +46,6 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
   const [uploading, setUploading] = useState(false);
   const [imagePickerOpen, setImagePickerOpen] = useState(false);
   const [resolvedImages, setResolvedImages] = useState<Record<string, string>>({});
-  const [showArchived, setShowArchived] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const galleryRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
@@ -60,14 +59,9 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
     return data.signedUrl;
   }, []);
 
-  const visibleConversations = useMemo(
-    () => conversations.filter((conversation) => conversation.archived === showArchived),
-    [conversations, showArchived],
-  );
-
   const activeConversation = useMemo(
-    () => conversations.find((conversation) => conversation.id === convId) ?? visibleConversations[0] ?? null,
-    [conversations, convId, visibleConversations],
+    () => conversations.find((conversation) => conversation.id === convId) ?? conversations[0] ?? null,
+    [conversations, convId],
   );
 
   const grouped = useMemo(() => {
@@ -166,12 +160,7 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
     void loadMessages(convId);
   }, [convId]);
 
-  useEffect(() => {
-    if (!visibleConversations.length) return;
-    if (!visibleConversations.some((conversation) => conversation.id === convId)) {
-      setConvId(visibleConversations[0].id);
-    }
-  }, [visibleConversations, convId]);
+
 
   useEffect(() => {
     const pending = messages.filter((m) => m.image_url);
@@ -336,60 +325,20 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
     onSignOut();
   }
 
-  async function createConversation() {
-    const title = window.prompt("Nome da nova conversa", "Meu novo bunker");
-    if (title === null) return;
-    const { error, data } = await db.from("conversations").insert({
-      title: title.trim() || "Nova conversa",
-      created_by: me.id,
-    }).select("id").single();
-    if (error || !data) {
-      toast.error(error?.message ?? "Falha ao criar conversa");
-      return;
+  async function clearChat() {
+    if (!convId) return;
+    if (!window.confirm("Tem certeza que deseja limpar todas as mensagens deste chat?")) return;
+    try {
+      const { error } = await db
+        .from("messages")
+        .delete()
+        .eq("conversation_id", convId);
+      if (error) throw error;
+      setMessages([]);
+      toast.success("Chat limpo com sucesso");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Falha ao limpar o chat");
     }
-    const conversationId = data.id;
-    const participant = await db.from("conversation_participants").insert({
-      conversation_id: conversationId,
-      user_id: me.id,
-    });
-    if (participant.error) {
-      toast.error(participant.error.message);
-      return;
-    }
-    await loadConversations();
-    setConvId(conversationId);
-    toast.success("Conversa criada");
-  }
-
-  async function toggleArchiveConversation(conversation: Conversation) {
-    const { error } = await db
-      .from("conversations")
-      .update({ archived: !conversation.archived })
-      .eq("id", conversation.id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    await loadConversations();
-    if (conversation.id === convId && !conversation.archived) {
-      setConvId(null);
-    }
-    toast.success(conversation.archived ? "Conversa restaurada" : "Conversa arquivada");
-  }
-
-  async function deleteConversation(conversation: Conversation) {
-    if (!window.confirm("Tem certeza que deseja apagar esta conversa?")) return;
-    const { error } = await db.from("conversations").delete().eq("id", conversation.id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    const convs = await loadConversations();
-    if (conversation.id === convId) {
-      const next = convs.find((conv) => conv.archived === showArchived && conv.id !== conversation.id);
-      setConvId(next?.id ?? null);
-    }
-    toast.success("Conversa deletada");
   }
 
   function getDisplayImageUrl(m: Message): string | null {
@@ -405,78 +354,18 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
       <aside className="flex flex-col border-r border-border/60 bg-card/80 backdrop-blur">
         <div className="flex items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
           <div>
-            <p className="text-stencil text-[11px] text-muted-foreground uppercase">Conversas</p>
-            <h2 className="text-base font-semibold text-foreground">Seu bunker</h2>
+            <p className="text-stencil text-[11px] text-muted-foreground uppercase">Chat</p>
+            <h2 className="text-base font-semibold text-foreground truncate">{activeConversation ? getConversationLabel(activeConversation) : "Nenhuma conversa"}</h2>
           </div>
-          <Button variant="ghost" size="icon" onClick={createConversation} aria-label="Nova conversa">
-            <Plus className="h-4 w-4" />
-          </Button>
         </div>
 
-        <div className="flex items-center gap-2 px-4 py-3 text-sm text-muted-foreground">
-          <button
-            type="button"
-            onClick={() => setShowArchived(false)}
-            className={`rounded-full px-3 py-1 transition ${showArchived ? "bg-muted/20" : "bg-gold/10 text-gold"}`}
-          >
-            Ativas
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowArchived(true)}
-            className={`rounded-full px-3 py-1 transition ${showArchived ? "bg-gold/10 text-gold" : "bg-muted/20"}`}
-          >
-            Arquivadas
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-2 pb-4">
-          {visibleConversations.length === 0 ? (
-            <div className="rounded-3xl border border-border/70 bg-background/80 p-4 text-sm text-muted-foreground">
-              {showArchived ? "Nenhuma conversa arquivada." : "Nenhuma conversa ativa. Crie uma nova para começar."}
+        <div className="flex-1 flex items-center justify-center px-4 py-8 text-center">
+          <div>
+            <div className="mx-auto grid h-12 w-12 place-items-center rounded-full border border-gold/40 p-1 mb-3">
+              <BunkerLogo size="sm" className="h-full w-full" />
             </div>
-          ) : (
-            <div className="space-y-2">
-              {visibleConversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  className={`group flex flex-col gap-2 rounded-3xl border px-4 py-3 transition ${conversation.id === convId ? "border-gold/80 bg-gold/5" : "border-border/40 bg-card/80 hover:border-gold/50"}`}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setConvId(conversation.id)}
-                    className="text-left"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="font-semibold text-foreground truncate">{getConversationLabel(conversation)}</span>
-                      {conversation.archived && <Archive className="h-4 w-4 text-muted-foreground" />}
-                    </div>
-                    <p className="mt-1 text-xs leading-snug text-muted-foreground truncate">
-                      {conversation.last_message ?? "Sem mensagens ainda."}
-                    </p>
-                  </button>
-                  <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                    <span>{conversation.last_message_time ? new Date(conversation.last_message_time).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "Sem atividade"}</span>
-                    <button
-                      type="button"
-                      onClick={() => void toggleArchiveConversation(conversation)}
-                      className="rounded-full px-2 py-1 text-xs text-foreground hover:bg-gold/10"
-                    >
-                      {conversation.archived ? "Restaurar" : "Arquivar"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => void deleteConversation(conversation)}
-                      className="rounded-full px-2 py-1 text-xs text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="inline h-3.5 w-3.5" />
-                      <span className="ml-1">Apagar</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+            <p className="text-sm text-muted-foreground">Chat pronto para usar</p>
+          </div>
         </div>
       </aside>
 
@@ -487,6 +376,9 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
             <h1 className="text-base font-semibold text-foreground truncate">{activeConversation ? getConversationLabel(activeConversation) : "Sem conversa selecionada"}</h1>
           </div>
           <div className="flex items-center gap-2">
+            <Button variant="ghost" size="icon" onClick={clearChat} aria-label="Limpar chat" title="Limpar todas as mensagens">
+              <Trash className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" onClick={handleSignOut} aria-label="Sair">
               <LogOut className="h-4 w-4" />
             </Button>
