@@ -53,7 +53,7 @@ export function BunkerLogin({ onSuccess }: { onSuccess: () => void }) {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <p className="text-stencil text-[10px] text-muted-foreground mb-2">Operador</p>
+              <p className="text-stencil text-[10px] text-muted-foreground mb-2">Escolha</p>
               <div className="grid grid-cols-2 gap-3">
                 {BUNKER_USERS.map((u) => (
                   <button
@@ -66,7 +66,7 @@ export function BunkerLogin({ onSuccess }: { onSuccess: () => void }) {
                         : "border-border bg-secondary/40 hover:border-gold/50"
                     }`}
                   >
-                    <div className="text-stencil text-[10px] text-muted-foreground">CÓDIGO</div>
+                    <div className="text-stencil text-[10px] text-muted-foreground">USUÁRIO</div>
                     <div className="font-display text-lg text-foreground">{u.username}</div>
                   </button>
                 ))}
@@ -74,7 +74,7 @@ export function BunkerLogin({ onSuccess }: { onSuccess: () => void }) {
             </div>
 
             <div>
-              <p className="text-stencil text-[10px] text-muted-foreground mb-2">Senha de acesso</p>
+              <p className="text-stencil text-[10px] text-muted-foreground mb-2">Senha do Bunker</p>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -99,7 +99,7 @@ export function BunkerLogin({ onSuccess }: { onSuccess: () => void }) {
           </form>
 
           <p className="mt-6 text-center text-[10px] text-muted-foreground text-stencil">
-            SETOR-01 · CANAL SEGURO · CRIPTO 256
+            NOSSO BUNKER · NOSSO MUNDINHO · SÓ NOSSO
           </p>
         </div>
       </div>
