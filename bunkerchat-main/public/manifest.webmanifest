@@ -1,0 +1,21 @@
+{
+  "name": "Bunker Chat",
+  "short_name": "Bunker",
+  "description": "Chat fortificado com conversa privada, arquivar, deletar e notificações.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#140B1A",
+  "theme_color": "#4A1A6B",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

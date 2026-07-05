@@ -9,7 +9,7 @@ export const Route = createFileRoute("/")({
   component: BunkerIndex,
 });
 
-function BunkerIndex() {
+export function BunkerIndex() {
   const { loading, userId, profile, refresh } = useAuth();
 
   if (loading) {
