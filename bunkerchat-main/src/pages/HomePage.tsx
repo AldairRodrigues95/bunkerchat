@@ -1,15 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
 import { useAuth } from "@/hooks/useAuth";
-import { BunkerLogin } from "@/components/BunkerLogin";
 import { BunkerChat } from "@/components/BunkerChat";
+import { BunkerLogin } from "@/components/BunkerLogin";
 import { BunkerLogo } from "@/components/BunkerLogo";
 
-export const Route = createFileRoute("/")({
-  ssr: false,
-  component: BunkerIndex,
-});
-
-export function BunkerIndex() {
+export function HomePage() {
   const { loading, userId, profile, refresh } = useAuth();
 
   if (loading) {

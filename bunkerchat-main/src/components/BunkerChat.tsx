@@ -70,6 +70,18 @@ export function BunkerChat({ me, onSignOut }: { me: Profile; onSignOut: () => vo
     [conversations, convId, visibleConversations],
   );
 
+  const grouped = useMemo(() => {
+    const groups: Record<string, { day: string; items: Message[] }> = {};
+    for (const msg of messages) {
+      const day = formatDay(msg.created_at);
+      if (!groups[day]) {
+        groups[day] = { day, items: [] };
+      }
+      groups[day].items.push(msg);
+    }
+    return Object.values(groups);
+  }, [messages]);
+
   function getConversationLabel(conversation: Conversation) {
     return conversation.title?.trim() || "Nova conversa";
   }
